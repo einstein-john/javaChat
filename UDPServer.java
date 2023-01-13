@@ -13,7 +13,8 @@ public class UDPServer {
         return String.valueOf(connected.getInetAddress());
     }
     static String clientIP = null;
-    public static void main(String[] args) throws IOException {
+    static Boolean exit = false;
+    public static void main(String[] args )throws IOException {
 
         ServerSocket connect = new ServerSocket(8080);
 
@@ -26,23 +27,18 @@ public class UDPServer {
 //TCP_UDP_chat.send this everytime you get a connection
             welcome.println("**WELCOME TO EINSTEIN's CHAT APP!!**");
             welcome.flush();
-           // welcome.println("Run this script on your terminal to start a chat session \n nc -u " + InetAddress.getLoopbackAddress() + " 4567");
-            //welcome.flush();
+
             welcome.println("Enter BYE to exit.");
             welcome.flush();
 
             if (incoming.isConnected()) {
                 clientIP = getIP(incoming);
                 System.out.println("Connected!! " + clientIP);
-                welcome.close();
-                connect.close();
-                break;
             }
 
-        }
         // Create a DatagramSocket to listen for incoming messages
         DatagramSocket socket = new DatagramSocket(4567);
-        Scanner sc = new Scanner(System.in);
+
         // Create a buffer to hold the incoming message
         byte[] buffer = new byte[1024];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
@@ -64,6 +60,9 @@ public class UDPServer {
             throw new RuntimeException(e);
         }
 
+        welcome.close();
+        connect.close();
+    }
 
     }
 
@@ -87,7 +86,7 @@ class send implements Runnable{
 
 // Enter a loop to TCP_UDP_chat.send messages
 
-        while (true) {
+        while (!UDPServer.exit) {
             String input = sc.nextLine();
 
              InetAddress address = packet.getAddress();
@@ -96,7 +95,8 @@ class send implements Runnable{
                 packet = new DatagramPacket("BYE".getBytes(), 3, address, port);
 
                 socket.close();
-                System.exit(0);
+                UDPServer.exit = true;
+
             }
             String strOUT = "RECEIVE: " + input + " \n ";
 
@@ -126,7 +126,7 @@ class receive implements Runnable{
     public void run() {
 
         // Enter a loop to listen for incoming messages
-        while (true) {
+        while (!UDPServer.exit) {
             // Receive the incoming message
             try {
                 socket.receive(packet);
@@ -138,7 +138,8 @@ class receive implements Runnable{
             if (message.trim().equals("BYE")) {
                 System.out.println("\n DISCONNECTED");
                 socket.close();
-                System.exit(0);
+                UDPServer.exit = true;
+
             }
             } catch (IOException e) {
                 throw new RuntimeException(e);
