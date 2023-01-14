@@ -12,13 +12,27 @@ public class UDPServer {
     public static String getIP(Socket connected) {
         return String.valueOf(connected.getInetAddress());
     }
+    //holds the client address after tcp connection
     static String clientIP = null;
     static Boolean exit = false;
-    public static void main(String[] args )throws IOException {
 
-        ServerSocket connect = new ServerSocket(8080);
+    //ports for tcp and udp connections
+    static int portTCP = 8080;
+    static int portUDP = 4567;
+//send port values to client.
+    public static int getPortTCP() {
+        return portTCP;
+    }
 
-        while (true) {
+    public static int getPortUDP() {
+        return portUDP;
+    }
+
+    public static void main(String[] args) throws IOException {
+
+        ServerSocket connect = new ServerSocket(portTCP);
+
+        while (!exit) {
             Socket incoming = connect.accept();
             System.out.println("Waiting for connection...");
 
@@ -34,20 +48,22 @@ public class UDPServer {
             if (incoming.isConnected()) {
                 clientIP = getIP(incoming);
                 System.out.println("Connected!! " + clientIP);
+                welcome.close();
+                incoming.close();
+                UDPServer.exit = true;
             }
 
         // Create a DatagramSocket to listen for incoming messages
-        DatagramSocket socket = new DatagramSocket(4567);
+        DatagramSocket socket = new DatagramSocket(portUDP);
 
         // Create a buffer to hold the incoming message
-        byte[] buffer = new byte[1024];
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        byte[] bufferS = new byte[1024];
+        DatagramPacket packetS = new DatagramPacket(bufferS, bufferS.length);
 
         // Create separate threads for sending and receiving messages
-        Thread sendThread = new Thread(new send(socket,packet));
+        Thread sendThread = new Thread(new send(socket,packetS));
 
-
-        Thread receiveThread = new Thread(new receive(socket,packet));
+        Thread receiveThread = new Thread(new receive(socket,packetS));
 
         // Start TCP_UDP_chat.send and TCP_UDP_chat.receive threads
         sendThread.start();
@@ -60,16 +76,12 @@ public class UDPServer {
             throw new RuntimeException(e);
         }
 
-        welcome.close();
-        connect.close();
-    }
-
+        }
     }
 
 }
 //TCP_UDP_chat.send thread class
 class send implements Runnable{
-
 
     Scanner sc = new Scanner(System.in);
     DatagramPacket packet;
@@ -92,13 +104,12 @@ class send implements Runnable{
              InetAddress address = packet.getAddress();
              int port = packet.getPort();
             if (input.trim().equals("BYE")) {
-                packet = new DatagramPacket("BYE".getBytes(), 3, address, port);
-
+                packet = new DatagramPacket("BYE".getBytes(),
+                        3, address, port);
                 socket.close();
                 UDPServer.exit = true;
-
             }
-            String strOUT = "RECEIVE: " + input + " \n ";
+            String strOUT = "RECEIVED: " + input + " \n ";
 
             packet = new DatagramPacket(strOUT.getBytes(StandardCharsets.UTF_8), strOUT.length(), address, port);
             try {
@@ -113,8 +124,6 @@ class send implements Runnable{
 
 //TCP_UDP_chat.receive thread class
 class receive implements Runnable{
-
-
     DatagramPacket packet;
     DatagramSocket socket;
 
@@ -130,16 +139,13 @@ class receive implements Runnable{
             // Receive the incoming message
             try {
                 socket.receive(packet);
-
-
             // Extract the message from the packet
             String message = new String(packet.getData(), 0, packet.getLength());
-            System.out.println("RECEIVE: " + message + "\n");
+            System.out.println("RECEIVED: " + message + "\n");
             if (message.trim().equals("BYE")) {
                 System.out.println("\n DISCONNECTED");
                 socket.close();
                 UDPServer.exit = true;
-
             }
             } catch (IOException e) {
                 throw new RuntimeException(e);
